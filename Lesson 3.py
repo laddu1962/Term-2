@@ -21,7 +21,7 @@ laser_fx = pygame.mixer.Sound('audio.mp3')
 laser_fx.set_volume(0.50)
 
 # font
-font30 = pygame.font.Font('retro_gaming/Retro Gaming.ttf', 30)
+font30 = pygame.font.Font(None, 30)
 
 # define game variables
 rows = 6
@@ -83,19 +83,36 @@ class Spaceship(pygame.sprite.Sprite):
         self.health_start = health
         self.health_remaining = health
         self.last_shot = pygame.time.get_ticks()
+        self.acceleration = [0, 0]
 
     def update(self):
         # set movement speed
-        speed = 8
+        speed = 0.1
         # cooldown variable
-        cooldown = 500  # millisecond
+        cooldown = 300  # millisecond
 
         # get key press
         key = pygame.key.get_pressed()
-        if key[pygame.K_LEFT] and self.rect.left > 0:
-            self.rect.x -= speed
-        if key[pygame.K_RIGHT] and self.rect.right < screen_width:
-            self.rect.x += speed
+        # left and right movement
+        if key[pygame.K_LEFT]:
+            self.acceleration[0] -= speed
+        if key[pygame.K_RIGHT]:
+            self.acceleration[0] += speed
+        # stops ship from going off screen
+        if self.rect.left <= 0 and self.acceleration[0] < 0 or self.rect.right >= screen_width and self.acceleration[0] > 0:
+            self.acceleration[0] = 0
+
+        self.rect.x += self.acceleration[0]
+        # up and down movement
+        if key[pygame.K_UP]:
+            self.acceleration[1] -= speed
+        if key[pygame.K_DOWN]:
+            self.acceleration[1] += speed
+        # stops ship at the edge of the screen [y] change number in the brackets for y-axis
+        if self.rect.top <= 0 and self.acceleration[1] < 0 or self.rect.bottom >= screen_height and self.acceleration[1] > 0:
+            self.acceleration[1] = 0
+
+        self.rect.y += self.acceleration[1]
 
         # record time now
         time_now = pygame.time.get_ticks()
@@ -130,6 +147,7 @@ class Bullets(pygame.sprite.Sprite):
         if self.rect.bottom < 0:
             self.kill()
         if pygame.sprite.spritecollide(self, alien_group, True):
+            explosion_group.add(Explosion(self.rect.x, self.rect.y))
             self.kill()
             laser_fx.play()
             score_increase()
@@ -172,11 +190,39 @@ class Alien_Bullets(pygame.sprite.Sprite):
             spaceship.health_remaining -= 1
 
 
+# Explosion
+explosion_group = pygame.sprite.Sprite()
+explosion_images = []
+for x in range(9):
+    explosion_images.append(pygame.image.load('Archive/regularExplosion0' + str(x) + ".png"))
+
+
+class Explosion(pygame.sprite.Sprite):
+    def __init__(self, x, y):
+        pygame.sprite.Sprite.__init__(self)
+        self.image = explosion_images[0]
+        self.rect = self.image.get_rect()
+        self.rect.center = [x,y]
+        self.anim_index = 0
+        self.current_frame = 0
+        self.nr_frame_between = 10
+
+    def update(self):
+        self.current_frame += 1
+        if self.current_frame >= self.nr_frame_between:
+            if self.anim_index < len(explosion_images) - 1:
+                self.anim_index += 1
+                self.image = explosion_images[self.anim_index]
+            else:
+                self.kill()
+
+
 # create sprite groups
 spaceship_group = pygame.sprite.Group()
 bullet_group = pygame.sprite.Group()
 alien_group = pygame.sprite.Group()
 alien_bullet_group = pygame.sprite.Group()
+explosion_group = pygame.sprite.Group()
 
 
 def create_aliens():
@@ -221,14 +267,16 @@ while run:
 
     # update sprite groups
     bullet_group.update()
-    alien_group.update()
-    alien_bullet_group.update()
+    # alien_group.update()
+    # alien_bullet_group.update()
+    explosion_group.update()
 
     # draw sprite groups
     spaceship_group.draw(screen)
     bullet_group.draw(screen)
-    alien_group.draw(screen)
-    alien_bullet_group.draw(screen)
+    # alien_group.draw(screen)
+    # alien_bullet_group.draw(screen)
+    explosion_group.draw(screen)
 
     # event handlers
     for event in pygame.event.get():
