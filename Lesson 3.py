@@ -1,3 +1,4 @@
+import math
 import random
 from pygame import mixer
 import pygame
@@ -77,7 +78,8 @@ def score_increase():
 class Spaceship(pygame.sprite.Sprite):
     def __init__(self, x, y, health):
         pygame.sprite.Sprite.__init__(self)
-        self.image = pygame.image.load("Ship.png")
+        self.baseImage = pygame.image.load("Ship.png")
+        self.image = self.baseImage
         self.rect = self.image.get_rect()
         self.rect.center = [x, y]
         self.health_start = health
@@ -85,17 +87,25 @@ class Spaceship(pygame.sprite.Sprite):
         self.last_shot = pygame.time.get_ticks()
         self.acceleration = [0, 0]
 
+
+
     def update(self):
         # set movement speed
         speed = 0.1
         # cooldown variable
         cooldown = 300  # millisecond
 
+        # rotate sprite to race acceleration
+        angle = math.atan2(self.acceleration[0], self.acceleration[1])
+        angle = angle * (180 / math.pi)
+        self.image = pygame.transform.rotate(self.baseImage, 180 + angle)
+
         # get key press
         key = pygame.key.get_pressed()
         # left and right movement
         if key[pygame.K_LEFT]:
             self.acceleration[0] -= speed
+            self.image = pygame.transform.rotate(self.image, -90)
         if key[pygame.K_RIGHT]:
             self.acceleration[0] += speed
         # stops ship from going off screen
